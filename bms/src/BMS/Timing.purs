@@ -91,7 +91,7 @@ scoreTimings :: Number -> NonEmpty List Measure -> Map Number (NonEmpty List Not
 scoreTimings bpm = foldlWithIndex go Map.empty <<< measureTimings bpm
   where
   go measure accumulator start =
-    Map.intersection (noteTimings bpm start measure) accumulator
+    Map.union (noteTimings bpm start measure) accumulator
 
 scoreTimings'
   :: forall f. Unfoldable f => Number -> NonEmpty List Measure -> f (Number /\ NonEmpty List Note)
