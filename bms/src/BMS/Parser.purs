@@ -64,7 +64,7 @@ backgroundNote = measured notes >>= \m ->
 gameplayNote :: Parser Instruction
 gameplayNote = measured notes >>= \m ->
   if any (m.channel == _) (11 .. 16 <> [ 18, 19 ] <> 21 .. 26 <> [ 28, 29 ]) then
-    pure $ GameplayNote { measure: m.measure, lane: m.channel, notes: m.rhs }
+    pure $ GameplayNote { measure: m.measure, column: m.channel, notes: m.rhs }
   else
     fail "not a gameplay note instruction"
 

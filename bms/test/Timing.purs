@@ -19,11 +19,11 @@ bpm = 120.0
 start :: Number
 start = 0.0
 
-notes :: NonEmpty List (NonEmpty List Note)
-notes = (note :| note : note : note : Nil) :| Nil
+columns :: NonEmpty List (NonEmpty List Note)
+columns = (note :| note : note : note : Nil) :| Nil
 
-notes' :: NonEmpty List (NonEmpty List Note)
-notes' = (note :| note : note : note : Nil) :| (note' :| note' : note' : note' : Nil) : Nil
+columns' :: NonEmpty List (NonEmpty List Note)
+columns' = (note :| note : note : note : Nil) :| (note' :| note' : note' : note' : Nil) : Nil
 
 note :: Note
 note = Note "00"
@@ -32,10 +32,10 @@ note' :: Note
 note' = Note "01"
 
 measure :: Measure
-measure = Measure { factor: 1.0, index: 0, notes }
+measure = Measure { factor: 1.0, index: 0, columns }
 
 measure' :: Measure
-measure' = Measure { factor: 1.0, index: 0, notes: notes' }
+measure' = Measure { factor: 1.0, index: 0, columns: columns' }
 
 testTiming :: Spec Unit
 testTiming = describe "BMS.Timing" do
@@ -50,20 +50,20 @@ testTiming = describe "BMS.Timing" do
     it "should advance proportionally" do
       let
         measures =
-          (0 :| 1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, notes }
+          (0 :| 1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, columns }
       Map.values (measureTimings bpm measures) `shouldEqual` List.fromFoldable
         [ 0.0, 2.0, 4.0, 6.0 ]
     it "should advance given the factor" do
       let
         measures =
-          Measure { factor: 2.0, index: 0, notes } :|
-            ((1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, notes })
+          Measure { factor: 2.0, index: 0, columns } :|
+            ((1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, columns })
       Map.values (measureTimings bpm measures) `shouldEqual` List.fromFoldable
         [ 0.0, 4.0, 6.0, 8.0 ]
   describe "scoreTimings" do
     it "should compose measureTimings and noteTimings" do
       let
         measures =
-          (0 :| 1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, notes }
+          (0 :| 1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, columns }
       Map.keys (scoreTimings bpm measures) `shouldEqual` Set.fromFoldable
         [ 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5 ]

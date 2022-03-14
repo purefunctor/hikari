@@ -32,7 +32,7 @@ data Instruction
   -- Main Data Field
   | TimeSignature { measure :: Int, factor :: Number }
   | BackgroundNote { measure :: Int, notes :: NonEmpty List Note }
-  | GameplayNote { measure :: Int, lane :: Int, notes :: NonEmpty List Note }
+  | GameplayNote { measure :: Int, column :: Int, notes :: NonEmpty List Note }
 
 derive instance Eq Instruction
 derive instance Ord Instruction
@@ -44,7 +44,7 @@ instance Show Instruction where
 newtype Measure = Measure
   { index :: Int
   , factor :: Number
-  , notes :: NonEmpty List (NonEmpty List Note)
+  , columns :: NonEmpty List (NonEmpty List Note)
   }
 
 derive instance Eq Measure

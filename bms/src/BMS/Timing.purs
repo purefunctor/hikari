@@ -19,34 +19,29 @@ import Data.Unfoldable (class Unfoldable)
 -- | `bpm` and the `start` position of the measure. Notes starting
 -- | at the same time are joined together to form a chord.
 noteTimings :: Number -> Number -> Measure -> Map Number (NonEmpty List Note)
-noteTimings bpm start (Measure { factor, notes }) =
-  let
-    measureLength = 60.0 / bpm * 4.0 * factor
+noteTimings bpm start (Measure { factor, columns }) = mergeChords $ columnTimings <$> columns
+  where
+  measureLength = 60.0 / bpm * 4.0 * factor
 
-    laneTimings lane =
-      let
-        measureSubdivisions = Foldable.length lane
+  columnTimings column = addTimings column
+    where
+    measureSubdivisions = Foldable.length column
+    subdivisionLength = measureLength / measureSubdivisions
 
-        subdivisionLength = measureLength / measureSubdivisions
+    addTimings = go Map.empty 0.0
+      where
+      go timedNotes currentFactor =
+        let
+          timing = start + currentFactor * subdivisionLength
+        in
+          case _ of
+            sound :| Nil ->
+              Map.insert timing (sound :| Nil) timedNotes
+            sound :| next : rest ->
+              go (Map.insert timing (sound :| Nil) timedNotes) (currentFactor + 1.0)
+                (next :| rest)
 
-        addTimings = go Map.empty 0.0
-          where
-          go timedNotes currentFactor =
-            let
-              timing = start + currentFactor * subdivisionLength
-            in
-              case _ of
-                sound :| Nil ->
-                  Map.insert timing (sound :| Nil) timedNotes
-                sound :| next : rest ->
-                  go (Map.insert timing (sound :| Nil) timedNotes) (currentFactor + 1.0)
-                    (next :| rest)
-      in
-        addTimings lane
-
-    mergeChords = foldl1 (Map.intersectionWith (<>))
-  in
-    mergeChords $ laneTimings <$> notes
+  mergeChords = foldl1 (Map.intersectionWith (<>))
 
 noteTimings'
   :: forall f
@@ -64,19 +59,8 @@ measureTimings :: Number -> NonEmpty List Measure -> Map Measure Number
 measureTimings bpm (m :| ms) = Map.fromFoldable (zip measures timings)
   where
   measures = m : ms
-
-  timings = go 0.0 (0.0 : Nil) measures
-
-  go currentTime measureTimes =
-    case _ of
-      Nil ->
-        List.reverse measureTimes
-      Measure { factor } : rest ->
-        let
-          measureLength = 60.0 / bpm * 4.0 * factor
-          nextTime = currentTime + measureLength
-        in
-          go nextTime (nextTime : measureTimes) rest
+  lengths = measures <#> \(Measure { factor }) -> 60.0 / bpm * 4.0 * factor
+  timings = List.scanl (+) 0.0 (0.0 : lengths)
 
 measureTimings'
   :: forall f
@@ -85,7 +69,6 @@ measureTimings'
   -> NonEmpty List Measure
   -> f (Measure /\ Number)
 measureTimings' bpm = Map.toUnfoldable <<< measureTimings bpm
-
 
 -- | Computes the starting positions of all notes across a non-empty
 -- | list of measures given the `bpm`. Notes starting at the same time

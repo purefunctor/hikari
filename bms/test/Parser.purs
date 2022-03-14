@@ -59,7 +59,7 @@ testParser = describe "BMS.Parser" do
                 }
             , GameplayNote
                 { measure: 1
-                , lane: 11
+                , column: 11
                 , notes: Note "AY" :| List.fromFoldable
                     [ Note "00", Note "00", Note "AZ", Note "00", Note "00", Note "00", Note "00" ]
                 }
