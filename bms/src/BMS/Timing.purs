@@ -5,8 +5,7 @@ import Prelude
 import BMS.Types (Measure(..), Note)
 import Data.Foldable as Foldable
 import Data.FoldableWithIndex (foldlWithIndex)
-import Data.List (List(..), zip, (:))
-import Data.List as List
+import Data.List (List(..), scanl, zip, (:))
 import Data.Map (Map)
 import Data.Map as Map
 import Data.NonEmpty (NonEmpty, (:|))
@@ -62,19 +61,8 @@ measureTimings :: Number -> NonEmpty List Measure -> Map Measure Number
 measureTimings bpm (m :| ms) = Map.fromFoldable (zip measures timings)
   where
   measures = m : ms
-
-  timings = go 0.0 (0.0 : Nil) measures
-
-  go currentTime measureTimes =
-    case _ of
-      Nil ->
-        List.reverse measureTimes
-      Measure { factor } : rest ->
-        let
-          measureLength = 60.0 / bpm * 4.0 * factor
-          nextTime = currentTime + measureLength
-        in
-          go nextTime (nextTime : measureTimes) rest
+  measureLengths = measures <#> \(Measure { factor }) -> 60.0 / bpm * 4.0 * factor
+  timings = scanl (+) 0.0 (0.0 : measureLengths)
 
 measureTimings'
   :: forall f
