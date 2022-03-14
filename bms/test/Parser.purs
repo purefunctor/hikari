@@ -32,8 +32,8 @@ bmsNote =
 """
 
 testParser :: Spec Unit
-testParser = do
-  describe "parse metadata" do
+testParser = describe "BMS.Parser" do
+  describe "instructions" do
     it "should parse header instructions" do
       runParser headers bmsMeta `shouldEqual`
         ( Right $ List.fromFoldable

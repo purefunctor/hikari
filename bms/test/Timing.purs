@@ -2,12 +2,13 @@ module Test.Timing where
 
 import Prelude
 
-import BMS.Timing (measureTimings, noteTimings)
+import BMS.Timing (measureTimings, noteTimings, scoreTimings)
 import BMS.Types (Measure(..), Note(..))
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Map as Map
 import Data.NonEmpty (NonEmpty, (:|))
+import Data.Set as Set
 import Data.Tuple.Nested ((/\))
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -37,7 +38,7 @@ measure' :: Measure
 measure' = Measure { factor: 1.0, index: 0, notes: notes' }
 
 testTiming :: Spec Unit
-testTiming = do
+testTiming = describe "BMS.Timing" do
   describe "noteTimings" do
     it "should divide a measure equally" do
       noteTimings bpm start measure `shouldEqual`
@@ -59,3 +60,10 @@ testTiming = do
             ((1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, notes })
       Map.values (measureTimings bpm measures) `shouldEqual` List.fromFoldable
         [ 0.0, 4.0, 6.0, 8.0 ]
+  describe "scoreTimings" do
+    it "should compose measureTimings and noteTimings" do
+      let
+        measures =
+          (0 :| 1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, notes }
+      Map.keys (scoreTimings bpm measures) `shouldEqual` Set.fromFoldable
+        [ 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5 ]
