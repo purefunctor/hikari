@@ -47,10 +47,15 @@ testTiming = do
         (Map.fromFoldable $ (_ /\ (note :| note' : Nil)) <$> [ 0.0, 0.5, 1.0, 1.5 ])
   describe "measureTimings" do
     it "should advance proportionally" do
-      let measures =
-            (0 :| 1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, notes }
-      Map.values (measureTimings bpm measures) `shouldEqual` List.fromFoldable [0.0, 2.0, 4.0, 6.0]
+      let
+        measures =
+          (0 :| 1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, notes }
+      Map.values (measureTimings bpm measures) `shouldEqual` List.fromFoldable
+        [ 0.0, 2.0, 4.0, 6.0 ]
     it "should advance given the factor" do
-      let measures =
-            Measure { factor: 2.0, index: 0, notes } :| ((1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, notes })
-      Map.values (measureTimings bpm measures) `shouldEqual` List.fromFoldable [0.0, 4.0, 6.0, 8.0]
+      let
+        measures =
+          Measure { factor: 2.0, index: 0, notes } :|
+            ((1 : 2 : 3 : Nil) <#> \index -> Measure { factor: 1.0, index, notes })
+      Map.values (measureTimings bpm measures) `shouldEqual` List.fromFoldable
+        [ 0.0, 4.0, 6.0, 8.0 ]
