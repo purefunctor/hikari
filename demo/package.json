@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "build": "spago install && spago build",
+    "dev": "webpack serve --mode=development"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.17.5",
+    "@babel/preset-env": "^7.16.11",
+    "babel-loader": "^8.2.3",
+    "purescript": "^0.14.7",
+    "spago": "^0.20.7",
+    "webpack": "^5.70.0",
+    "webpack-cli": "^4.9.2",
+    "webpack-dev-server": "^4.7.4"
+  }
+}
