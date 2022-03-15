@@ -2,6 +2,7 @@
 , dependencies =
   [ "aff"
   , "arrays"
+  , "control"
   , "effect"
   , "either"
   , "foldable-traversable"
@@ -15,6 +16,7 @@
   , "prelude"
   , "spec"
   , "string-parsers"
+  , "strings"
   , "tuples"
   , "unfoldable"
   ]

@@ -1,121 +1,114 @@
-module BMS.Parser where
+module BMS.Parser (bms) where
 
 import Prelude
 
-import BMS.Types (Instruction(..), Note(..))
-import Data.Array (any, (..))
+import BMS.Types (BmsLine(..))
+import Control.Alt ((<|>))
+import Control.Alternative (empty)
+import Data.Array as Array
+import Data.Array.NonEmpty as NEA
+import Data.Foldable as Foldable
 import Data.Int as Int
-import Data.List (List)
-import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
-import Data.NonEmpty (NonEmpty)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number as Number
-import Text.Parsing.StringParser (Parser, fail, try)
-import Text.Parsing.StringParser.CodePoints (char, regex, skipSpaces, string, whiteSpace)
-import Text.Parsing.StringParser.Combinators (choice, many1, sepEndBy)
+import Data.String as String
+import Data.String.Regex (Regex)
+import Data.String.Regex as Regex
+import Data.String.Regex.Flags (global, unicode)
+import Data.String.Regex.Unsafe (unsafeRegex)
 
--- Header Instructions
+matchThen :: forall r. Regex -> (Array (Maybe String) -> Maybe r) -> String -> Maybe r
+matchThen p f i = Regex.match p i <#> NEA.toArray >>= f
 
-genre :: Parser Instruction
-genre = Genre <$> header_ "GENRE"
-
-title :: Parser Instruction
-title = Title <$> header_ "TITLE"
-
-artist :: Parser Instruction
-artist = Artist <$> header_ "ARTIST"
-
-bpm :: Parser Instruction
-bpm = BPM <$> (char '#' *> string "BPM" *> skipSpaces *> number)
-
-number :: Parser Number
-number = fromMaybe' "not a number" $ Number.fromString <$> regex "[0-9][0-9]*(\\.[0-9][0-9]*)?"
-
-subtitle :: Parser Instruction
-subtitle = Subtitle <$> header_ "SUBTITLE"
-
-stagefile :: Parser Instruction
-stagefile = Stagefile <$> header_ "STAGEFILE"
-
-banner :: Parser Instruction
-banner = Banner <$> header_ "BANNER"
-
-wav :: Parser Instruction
-wav = string "#WAV" *> (Wav <$> ({ note: _, soundFile: _ } <$> note <*> (skipSpaces *> soundFile)))
+header :: String -> Maybe BmsLine
+header = matchThen pattern convert
   where
-  soundFile = regex ".+"
+  pattern = unsafeRegex ("^#(" <> words <> ") (.+)$") unicode
 
--- Note Instructions
+  words = String.joinWith "|"
+    [ "GENRE"
+    , "TITLE"
+    , "ARTIST"
+    , "BPM"
+    , "SUBTITLE"
+    , "STAGEFILE"
+    , "BANNER"
+    ]
 
-timeSignature :: Parser Instruction
-timeSignature = measured number >>= \m ->
-  if m.channel == 2 then
-    pure $ TimeSignature { measure: m.measure, factor: m.rhs }
-  else
-    fail "not a time signature instruction"
+  convert [ _, Just key, Just value ] =
+    case key of
+      "GENRE" ->
+        pure $ Genre value
+      "TITLE" ->
+        pure $ Title value
+      "ARTIST" ->
+        pure $ Artist value
+      "BPM" ->
+        BPM <$> Number.fromString value
+      "SUBTITLE" ->
+        pure $ Subtitle value
+      "STAGEFILE" ->
+        pure $ Stagefile value
+      "BANNER" ->
+        pure $ Banner value
+      _ ->
+        Nothing
+  convert _ = Nothing
 
-backgroundNote :: Parser Instruction
-backgroundNote = measured notes >>= \m ->
-  if m.channel == 1 then
-    pure $ BackgroundNote { measure: m.measure, notes: m.rhs }
-  else
-    fail "not a background note instruction"
+wav :: String -> Maybe BmsLine
+wav = matchThen pattern convert
+  where
+  pattern = unsafeRegex "^#WAV([0-9A-Z]{2}) (.+)$" unicode
 
-gameplayNote :: Parser Instruction
-gameplayNote = measured notes >>= \m ->
-  if any (m.channel == _) (11 .. 16 <> [ 18, 19 ] <> 21 .. 26 <> [ 28, 29 ]) then
-    pure $ GameplayNote { measure: m.measure, column: m.channel, notes: m.rhs }
-  else
-    fail "not a gameplay note instruction"
+  convert [ _, Just name, Just file ]
+    | name /= "00" = Just $ Wav { name, file }
+  convert _ = Nothing
 
--- Top-level
+changeFactor :: String -> Maybe BmsLine
+changeFactor = matchThen pattern convert
+  where
+  pattern = unsafeRegex "^#(\\d{3})02:([0-9]\\.[0-9]+)$" unicode
 
-header :: Parser Instruction
-header = choice $ try <$>
-  [ genre
-  , title
-  , artist
-  , bpm
-  , subtitle
-  , stagefile
-  , banner
+  convert [ _, Just measure_, Just factor_ ] = ado
+    measure <- Int.fromString measure_
+    factor <- Number.fromString factor_
+    in ChangeFactor { measure, factor }
+  convert _ = Nothing
+
+noteColumn :: String -> Maybe BmsLine
+noteColumn = matchThen pattern convert
+  where
+  pattern = unsafeRegex "^#(\\d{3})(\\d{2}):([0-9A-Z]+)$" unicode
+
+  convert =
+    let
+      -- We've already filtered valid names in the pattern above, so
+      -- we're only grouping them in pairs here. Likewise, notes with
+      -- only a single character are also dropped.
+      commandPattern = unsafeRegex ".{2}" (unicode <> global)
+    in
+      case _ of
+        [ _, Just measure_, Just channel_, Just commands_ ]
+          | channel_ /= "02" -> ado
+              measure <- Int.fromString measure_
+              channel <- Int.fromString channel_
+              notes <- Array.catMaybes <<< NEA.toArray <$>
+                Regex.match commandPattern commands_
+              in NoteColumn { measure, channel, notes }
+        _ ->
+          Nothing
+
+bmsLine :: String -> Maybe BmsLine
+bmsLine i = Foldable.foldl (\n f -> f i <|> n) empty
+  [ header
   , wav
+  , changeFactor
+  , noteColumn
   ]
 
-headers :: Parser (List Instruction)
-headers = header `sepEndBy` whiteSpace
+bms :: String -> Array BmsLine
+bms = fromMaybe [] <<< map (Array.mapMaybe bmsLine) <<< splitLines
 
-measure :: Parser Instruction
-measure = choice $ try <$>
-  [ timeSignature
-  , backgroundNote
-  , gameplayNote
-  ]
-
-measures :: Parser (List Instruction)
-measures = measure `sepEndBy` whiteSpace
-
--- Combinators
-
-header_ :: String -> Parser String
-header_ n = char '#' *> string n *> skipSpaces *> regex ".+"
-
-measured :: forall rhs. Parser rhs -> Parser { measure :: Int, channel :: Int, rhs :: rhs }
-measured rhsParser = char '#' *> ({ measure: _, channel: _, rhs: _ } <$> measureInt <*> channelInt)
-  <*> (char ':' *> rhsParser)
-  where
-  measureInt = fromMaybe' "not a measure" (Int.fromString <$> regex "[0-9]{3}")
-  channelInt = fromMaybe' "not a channel" (Int.fromString <$> regex "[0-9]{2}")
-
-note :: Parser Note
-note = Note <$> regex "[0-9a-zA-Z]{2}"
-
-notes :: Parser (NonEmpty List Note)
-notes = unwrap <$> many1 note
-
-fromMaybe' :: forall a. String -> Parser (Maybe a) -> Parser a
-fromMaybe' error parser = parser >>= case _ of
-  Just result ->
-    pure result
-  Nothing ->
-    fail error
+splitLines :: String -> Maybe (Array String)
+splitLines = Regex.match (unsafeRegex "[^\\r\\n]+" (unicode <> global)) >>> map
+  (Array.catMaybes <<< NEA.toArray)

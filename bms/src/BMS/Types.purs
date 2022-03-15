@@ -3,24 +3,11 @@ module BMS.Types where
 import Prelude
 
 import Data.Generic.Rep (class Generic)
-import Data.List (List)
-import Data.Newtype (class Newtype)
-import Data.NonEmpty (NonEmpty)
 import Data.Show.Generic (genericShow)
 
-newtype Note = Note String
+-- Types
 
-derive instance Eq Note
-derive instance Ord Note
-derive instance Newtype Note _
-
-instance Show Note where
-  show (Note note) = "(Note " <> note <> ")"
-
-type Indices = NonEmpty List Note
-
-data Instruction
-  -- Header Field
+data BmsLine
   = Genre String
   | Title String
   | Artist String
@@ -28,31 +15,31 @@ data Instruction
   | Subtitle String
   | Stagefile String
   | Banner String
-  | Wav { note :: Note, soundFile :: String }
-  -- Main Data Field
-  | TimeSignature { measure :: Int, factor :: Number }
-  | BackgroundNote { measure :: Int, notes :: NonEmpty List Note }
-  | GameplayNote { measure :: Int, column :: Int, notes :: NonEmpty List Note }
+  -- #WAVxx yy
+  --
+  -- registers a file to a name
+  --
+  -- * xx - name (string)
+  -- * yy - file (string)
+  | Wav { name :: String, file :: String }
+  -- #xxx02:zz
+  --
+  -- changes the time signature
+  --
+  -- * xxx - measure (int)
+  -- * zz  - factor  (float)
+  | ChangeFactor { measure :: Int, factor :: Number }
+  -- #xxxyy:zz
+  --
+  -- places a stream of notes
+  --
+  -- * xxx - measure  (int)
+  -- * yy  - channel  (int)
+  -- * zz  - commands (string) [0-9a-zA-z]
+  | NoteColumn { measure :: Int, channel :: Int, notes :: Array String }
 
-derive instance Eq Instruction
-derive instance Ord Instruction
-derive instance Generic Instruction _
-
-instance Show Instruction where
-  show = genericShow
-
-newtype Measure = Measure
-  { index :: Int
-  , factor :: Number
-  , columns :: NonEmpty List (NonEmpty List Note)
-  }
-
-derive instance Eq Measure
-
-instance Ord Measure where
-  compare (Measure m1) (Measure m2) = compare m1.index m2.index
-
-derive instance Generic Measure _
-
-instance Show Measure where
+derive instance Eq BmsLine
+derive instance Ord BmsLine
+derive instance Generic BmsLine _
+instance Show BmsLine where
   show = genericShow
