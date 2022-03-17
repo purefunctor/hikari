@@ -21,7 +21,7 @@ known =
 #WAV01 sound_file.wav
 
 #00002:1.25
-#00100:0101
+#00101:0101
 """
 
 testParser :: Spec Unit
@@ -38,7 +38,7 @@ testParser = describe "BMS.Parser" do
         , Banner "banner.png"
         , Wav { file: "sound_file.wav", name: "01" }
         , ChangeFactor { factor: 1.25, measure: 0 }
-        , NoteColumn { channel: 0, measure: 1, notes: [ "01", "01" ] }
+        , NoteColumn { channel: 1, measure: 1, notes: [ "01", "01" ] }
         ]
     it "should parse instructions partially" do
       bms "#WAV01 sound_file.wav\n#WAV.. sound_file.wav" `shouldEqual`

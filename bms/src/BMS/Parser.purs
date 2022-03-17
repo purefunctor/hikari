@@ -2,7 +2,7 @@ module BMS.Parser (bms) where
 
 import Prelude
 
-import BMS.Types (BmsLine(..))
+import BMS.Types (BmsLine(..), isBGMChannel, isFactorChannel, isPlayChannel)
 import Control.Alt ((<|>))
 import Control.Alternative (empty)
 import Data.Array as Array
@@ -89,9 +89,10 @@ noteColumn = matchThen pattern convert
     in
       case _ of
         [ _, Just measure_, Just channel_, Just commands_ ]
-          | channel_ /= "02" -> ado
+          | Just channel <- Int.fromString channel_
+          , not $ isFactorChannel channel
+          , isBGMChannel channel || isPlayChannel channel -> ado
               measure <- Int.fromString measure_
-              channel <- Int.fromString channel_
               notes <- Array.catMaybes <<< NEA.toArray <$>
                 Regex.match commandPattern commands_
               in NoteColumn { measure, channel, notes }
