@@ -1,4 +1,4 @@
-module Hikari.FullGraph where
+module Hikari.Graph where
 
 import Prelude
 
@@ -7,6 +7,7 @@ import Data.Maybe (Maybe)
 import Data.Tuple.Nested (type (/\))
 import Data.Typelevel.Num (D32, D80)
 import Data.Vec (Vec)
+import Hikari.Graph.BGM (TBGM)
 import WAGS.Graph.AudioUnit (Subgraph, TGain, TPlayBuf, TSpeaker, TSubgraph)
 import WAGS.Interpret (AsSubgraph)
 
@@ -18,21 +19,3 @@ type FullGraph =
   -- Audio source node for background notes.
   , bgm :: TBGM /\ {}
   )
-
-type TBGM = TSubgraph D32 "bgmFader" ()
-  (Maybe { note :: Note, offset :: Offset, switch :: Boolean })
-
-type BGMGraph =
-  ( bgmFader :: TGain /\ { bgmA :: Unit, bgmB :: Unit }
-  , bgmA :: TPlayBuf /\ {}
-  , bgmB :: TPlayBuf /\ {}
-  )
-
-type BGMSig = Subgraph
-  ()
-  ( AsSubgraph
-      "bgmFader"
-      ()
-      (Maybe { note :: Note, offset :: Offset, switch :: Boolean })
-  )
-  (Vec D32 (Maybe { note :: Note, offset :: Offset, switch :: Boolean }))

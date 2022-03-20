@@ -3,7 +3,7 @@ module Hikari.Setup where
 import Prelude
 
 import Hikari.Accumulator (Accumulator, initialAccumulator)
-import Hikari.FullGraph (FullGraph)
+import Hikari.Graph (FullGraph)
 import Hikari.Types (Residuals, World)
 import Type.Proxy (Proxy(..))
 import WAGS.Change (ichange')
