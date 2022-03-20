@@ -14,30 +14,25 @@ type FullGraph =
   ( -- The physical output device where keysounds are played.
     speaker :: TSpeaker /\ { fader :: Unit }
   -- Top-level controller node for the volume of keysounds.
-  , fader :: TGain /\ { bgm0 :: Unit, bgm1 :: Unit }
-
-  -- Audio source nodes for background keysounds. Two of these is
-  -- needed such that we don't end up playing keysounds in in-use
-  -- `TPlayBuf` nodes.
-  , bgm0 :: TBGM /\ {}
-  , bgm1 :: TBGM /\ {}
+  , fader :: TGain /\ { bgm :: Unit }
+  -- Audio source node for background nodes.
+  , bgm :: TBGM /\ {}
   )
 
-type TBGM = TSubgraph D32 "bgm" () (Maybe { note :: Note, offset :: Offset })
+type TBGM = TSubgraph D32 "bgmFader" ()
+  (Maybe { note :: Note, offset :: Offset, switch :: Boolean })
 
 type BGMGraph =
-  ( bgm :: TPlayBuf /\ {}
+  ( bgmFader :: TGain /\ { bgmA :: Unit, bgmB :: Unit }
+  , bgmA :: TPlayBuf /\ {}
+  , bgmB :: TPlayBuf /\ {}
   )
 
-type BGMSig id = Subgraph
+type BGMSig = Subgraph
   ()
   ( AsSubgraph
-      id
+      "bgmFader"
       ()
-      (Maybe { note :: Note, offset :: Offset })
+      (Maybe { note :: Note, offset :: Offset, switch :: Boolean })
   )
-  (Vec D32 (Maybe { note :: Note, offset :: Offset }))
-
-type BGM0Sig = BGMSig "bgm0"
-
-type BGM1Sig = BGMSig "bgm1"
+  (Vec D32 (Maybe { note :: Note, offset :: Offset, switch :: Boolean }))

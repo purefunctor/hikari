@@ -7,6 +7,8 @@ import Control.Plus (empty)
 import Data.Maybe (Maybe(..))
 import Data.Vec (fill)
 import Hikari.FullGraph (BGMGraph, BGMSig)
+import Type.Proxy (Proxy(..))
+import WAGS.Change (ichange')
 import WAGS.Control.Functions.Subgraph as SG
 import WAGS.Control.Indexed (IxWAG)
 import WAGS.Control.Types (Frame0)
@@ -21,20 +23,24 @@ createFrameSub
 createFrameSub = ipatch
   { microphone: empty
   , mediaElement: empty
-  , subgraphs: { bgm }
+  , subgraphs: { bgmFader }
   , tumults: {}
   }
 
 subFrameLoop
   :: forall res proof audio engine
    . AudioInterpret audio engine
-  => Maybe { note :: Note, offset :: Offset }
+  => Maybe { note :: Note, offset :: Offset, switch :: Boolean }
   -> Unit
   -> IxWAG audio engine proof res BGMGraph BGMGraph Unit
-subFrameLoop _ _ = pure unit
+subFrameLoop Nothing _ =
+  pure unit
+subFrameLoop (Just _) _ = do
+  ichange' (Proxy :: _ "bgmFader") 1.0
+  pure unit
 
-bgm :: BGMSig "bgm"
-bgm = CTOR.Subgraph
+bgmFader :: BGMSig
+bgmFader = CTOR.Subgraph
   { subgraphMaker: AsSubgraph
       ( const $ SG.istart (\_ -> createFrameSub) (SG.iloop subFrameLoop)
       )

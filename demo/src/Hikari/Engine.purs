@@ -16,16 +16,14 @@ import WAGS.Run (RunAudio, RunEngine)
 
 createFrame
   :: forall res
-   . BGMSig "bgm" /\ {}
-  -> BGMSig "bgm" /\ {}
+   . BGMSig /\ {}
   -> IxWAG RunAudio RunEngine Frame0 res () FullGraph Unit
-createFrame bgm0 bgm1 = icreate $ speaker { fader: gain 1.0 { bgm0, bgm1 } }
+createFrame bgm = icreate $ speaker { fader: gain 1.0 { bgm } }
 
 makePiece
   :: forall acc env res
    . Monoid res
-  => BGMSig "bgm"
-  -> BGMSig "bgm"
+  => BGMSig
   -> (forall proof. env -> IxWAG RunAudio RunEngine proof res FullGraph FullGraph acc)
   -> ( forall proof
         . env
@@ -33,5 +31,5 @@ makePiece
        -> IxWAG RunAudio RunEngine proof res FullGraph FullGraph acc
      )
   -> Scene env RunAudio RunEngine Frame0 res
-makePiece bgm0 bgm1 setup oracle = (\env -> (createFrame (bgm0 /\ {}) (bgm1 /\ {}) :*> setup env))
+makePiece bgm setup oracle = (\env -> (createFrame (bgm /\ {}) :*> setup env))
   @!> iloop oracle

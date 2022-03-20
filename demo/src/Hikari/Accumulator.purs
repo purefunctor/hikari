@@ -29,30 +29,29 @@ import WAGS.Graph.Parameter (AudioOnOff(..), _offOn)
 import WAGS.WebAPI (BrowserAudioBuffer)
 
 type Accumulator =
-  { bgmKeySoundFn :: { _0 :: Cofree Identity KeySoundFn, _1 :: Cofree Identity KeySoundFn }
+  { keySoundFn ::
+      { bgm :: Cofree Identity KeySoundFn
+      }
   }
 
 initialAccumulator :: Accumulator
 initialAccumulator =
-  { bgmKeySoundFn:
-      { _0: keySoundFnCf.bgm0
-      , _1: keySoundFnCf.bgm1
+  { keySoundFn:
+      { bgm: keySoundFnCf.bgm
       }
   }
 
 -- INTERNALS!!! BE WARNED!!!
 
 type OfValues v =
-  ( bgm0 :: v
-  , bgm1 :: v
+  ( bgm :: v
   )
 
 -- Each audio source node in the graph has a cycling stream of
 -- `KeySoundFn`s.
 keySoundFnCf :: { | OfValues (Cofree Identity KeySoundFn) }
 keySoundFnCf =
-  { bgm0: mkKeySoundFnCf (Proxy :: _ "bgm0") d31
-  , bgm1: mkKeySoundFnCf (Proxy :: _ "bgm1") d31
+  { bgm: mkKeySoundFnCf (Proxy :: _ "bgm") d31 false
   }
 
 -- Builds the corresponding `KeySoundFn` for an audio source node
@@ -62,19 +61,20 @@ keySoundFnHd
    . Nat nat
   => Lt nat D32
   => nat
+  -> Boolean
   -> { | OfValues KeySoundFn
      }
-keySoundFnHd index =
-  { bgm0: KeySoundFn
-      (\input -> ichange' (Proxy :: _ "bgm0") (subgraphSingleSetter index $ Just input))
-  , bgm1: KeySoundFn
-      (\input -> ichange' (Proxy :: _ "bgm1") (subgraphSingleSetter index $ Just input))
+keySoundFnHd index switch =
+  { bgm: KeySoundFn
+      ( \input -> ichange' (Proxy :: _ "bgm")
+          (subgraphSingleSetter index $ Just { note: input.note, offset: input.offset, switch })
+      )
   }
 
 -- A helper induction for building the looping `KeySoundFn` stream.
 class MkKeySoundFnCf :: Symbol -> Type -> Constraint
 class MkKeySoundFnCf graphNode subgraphIndex where
-  mkKeySoundFnCf :: Proxy graphNode -> subgraphIndex -> Cofree Identity KeySoundFn
+  mkKeySoundFnCf :: Proxy graphNode -> subgraphIndex -> Boolean -> Cofree Identity KeySoundFn
 
 -- At the base case, we take the already-built stream and "append" it
 -- to the end, effectively creating an infinite stream.
@@ -84,8 +84,8 @@ instance
   , Cons graphNode KeySoundFn _1 (OfValues KeySoundFn)
   ) =>
   MkKeySoundFnCf graphNode D0 where
-  mkKeySoundFnCf graphNode subgraphIndex = deferCofree
-    ( \_ -> Record.get graphNode (keySoundFnHd subgraphIndex) /\ Identity
+  mkKeySoundFnCf graphNode subgraphIndex switch = deferCofree
+    ( \_ -> Record.get graphNode (keySoundFnHd subgraphIndex switch) /\ Identity
         (Record.get graphNode keySoundFnCf)
     )
 
@@ -100,7 +100,7 @@ else instance
   , MkKeySoundFnCf graphNode predSubgraphIndex
   ) =>
   MkKeySoundFnCf graphNode subgraphIndex where
-  mkKeySoundFnCf graphNode subgraphIndex = deferCofree
-    ( \_ -> Record.get graphNode (keySoundFnHd subgraphIndex) /\ Identity
-        (mkKeySoundFnCf graphNode (pred subgraphIndex))
+  mkKeySoundFnCf graphNode subgraphIndex switch = deferCofree
+    ( \_ -> Record.get graphNode (keySoundFnHd subgraphIndex switch) /\ Identity
+        (mkKeySoundFnCf graphNode (pred subgraphIndex) (not switch))
     )
