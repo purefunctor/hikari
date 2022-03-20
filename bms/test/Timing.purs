@@ -2,8 +2,8 @@ module Test.Timing where
 
 import Prelude
 
-import BMS.Timing (Column(..), Factor(..), Measure(..), Measures, Note(..), Notes(..), gatherAll)
-import BMS.Types (BmsLine(..))
+import BMS.Timing (Measures, gatherAll)
+import BMS.Types (BmsLine(..), Column(..), Factor(..), Measure(..), Note(..), Notes(..))
 import Data.Lens (_Just, ifoldlOf) as Lens
 import Data.Lens.Indexed (itraversed) as Lens
 import Data.Map (Map)
@@ -11,7 +11,6 @@ import Data.Map as Map
 import Data.Maybe (Maybe)
 import Data.TraversableWithIndex (class TraversableWithIndex)
 import Data.Tuple.Nested (type (/\), (/\))
-import Safe.Coerce (coerce)
 import Safe.Coerce as Safe
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)

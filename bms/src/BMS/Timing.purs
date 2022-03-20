@@ -2,7 +2,18 @@ module BMS.Timing where
 
 import Prelude
 
-import BMS.Types (BmsLine(..), isBGMChannel, isPlayChannel)
+import BMS.Types
+  ( BmsLine(..)
+  , Column(..)
+  , Factor(..)
+  , Measure(..)
+  , Note(..)
+  , Notes(..)
+  , Offset(..)
+  , isBGMChannel
+  , isPlayChannel
+  , unsafeFromChannel
+  )
 import Data.Array as Array
 import Data.Foldable (class Foldable)
 import Data.Foldable as Foldable
@@ -14,69 +25,10 @@ import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Newtype (class Newtype, unwrap)
+import Data.Newtype (unwrap)
 import Data.Tuple.Nested (type (/\), (/\))
 import Safe.Coerce (coerce)
-import Safe.Coerce as Safe
 import Type.Proxy (Proxy(..))
-
-newtype Measure = Measure Int
-
-derive instance Newtype Measure _
-derive newtype instance Eq Measure
-derive newtype instance Ord Measure
-
-instance Show Measure where
-  show (Measure measure) = "(Measure " <> show measure <> ")"
-
-newtype Factor = Factor Number
-
-derive instance Newtype Factor _
-derive newtype instance Eq Factor
-derive newtype instance Ord Factor
-
-instance Show Factor where
-  show (Factor measure) = "(Factor " <> show measure <> ")"
-
-data Column = BGMColumn Int | PlayColumn Int
-
-derive instance Eq Column
-derive instance Ord Column
-
-instance Show Column where
-  show (BGMColumn c) = "(BGMColumn " <> show c <> ")"
-  show (PlayColumn c) = "(PlayColumn " <> show c <> ")"
-
-unsafeFromChannel :: Int -> Column
-unsafeFromChannel i =
-  PlayColumn $ min (min (i `mod` 11) (i `mod` 18 + 5)) (min (i `mod` 21) (i `mod` 21 + 5))
-
-newtype Note = Note String
-
-derive instance Newtype Note _
-derive newtype instance Eq Note
-derive newtype instance Ord Note
-
-instance Show Note where
-  show (Note note) = "(Note " <> show note <> ")"
-
-newtype Notes = Notes (Array Note)
-
-derive instance Newtype Notes _
-derive newtype instance Eq Notes
-derive newtype instance Ord Notes
-
-instance Show Notes where
-  show (Notes notes) = "(Notes " <> show notes <> ")"
-
-newtype Offset = Offset Number
-
-derive instance Newtype Offset _
-derive newtype instance Eq Offset
-derive newtype instance Ord Offset
-
-instance Show Offset where
-  show (Offset offset) = "(Offset " <> show offset <> ")"
 
 type Headers =
   { artist :: Maybe String
