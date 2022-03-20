@@ -3,7 +3,6 @@ module Hikari.Engine where
 import Prelude
 
 import Control.Monad.Indexed ((:*>))
-import Data.Tuple.Nested ((/\))
 import Hikari.Accumulator (Accumulator)
 import Hikari.Accumulator as Accumulator
 import Hikari.Graph (FullGraph)
@@ -21,7 +20,7 @@ import WAGS.Run (RunAudio, RunEngine, TriggeredScene)
 type Environment = TriggeredScene Unit World ()
 
 initialize :: IxWAG RunAudio RunEngine Frame0 Residuals () FullGraph Unit
-initialize = icreate $ speaker { fader: gain 1.0 { bgm: GraphBGM.bgmFader /\ {} } }
+initialize = icreate $ speaker { fader: gain 1.0 { bgm: GraphBGM.bgmFader } }
 
 setup :: Environment -> IxWAG RunAudio RunEngine Frame0 Residuals FullGraph FullGraph Accumulator
 setup _ = ichange' (Proxy :: _ "fader") 1.0 $> Accumulator.initial

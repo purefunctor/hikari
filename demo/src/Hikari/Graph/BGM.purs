@@ -16,8 +16,8 @@ import WAGS.Change (ichange')
 import WAGS.Control.Functions.Subgraph as SG
 import WAGS.Control.Indexed (IxWAG)
 import WAGS.Control.Types (Frame0)
+import WAGS.Create.Optionals (subgraph)
 import WAGS.Graph.AudioUnit (Subgraph(..), TGain, TPlayBuf, TSubgraph)
-import WAGS.Graph.AudioUnit as CTOR
 import WAGS.Interpret (class AudioInterpret, AsSubgraph(..))
 import WAGS.Interpret (AsSubgraph)
 import WAGS.Patch (ipatch)
@@ -69,10 +69,8 @@ loop
   -> IxWAG audio engine proof residuals Graph Graph Unit
 loop _ _ = pure unit
 
-bgmFader :: Subgraph () (AsSubgraph Name () Environment) (Vec Count Environment)
-bgmFader = Subgraph
-  { subgraphMaker: AsSubgraph
-      ( const $ SG.istart (\e -> initialize :*> setup e) (SG.iloop loop)
-      )
-  , envs: fill $ const Nothing
-  }
+bgmFader :: Subgraph () (AsSubgraph Name () Environment) (Vec Count Environment) /\ {}
+bgmFader = subgraph
+  (fill $ const Nothing)
+  (const $ SG.istart (\e -> initialize :*> setup e) (SG.iloop loop))
+  {}
