@@ -15,7 +15,7 @@ type FullGraph =
     speaker :: TSpeaker /\ { fader :: Unit }
   -- Top-level controller node for the volume of keysounds.
   , fader :: TGain /\ { bgm :: Unit }
-  -- Audio source node for background nodes.
+  -- Audio source node for background notes.
   , bgm :: TBGM /\ {}
   )
 
