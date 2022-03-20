@@ -1,4 +1,4 @@
-module Hikari.Accumulator (Accumulator, initialAccumulator) where
+module Hikari.Accumulator (Accumulator, initial) where
 
 import Data.Typelevel.Num
 import Prelude
@@ -34,8 +34,8 @@ type Accumulator =
       }
   }
 
-initialAccumulator :: Accumulator
-initialAccumulator =
+initial :: Accumulator
+initial =
   { keySoundFn:
       { bgm: keySoundFnCf.bgm
       }
