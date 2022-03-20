@@ -1,5 +1,6 @@
-module Hikari.Accumulator where
+module Hikari.Accumulator (Accumulator, initialAccumulator) where
 
+import Data.Typelevel.Num
 import Prelude
 
 import Control.Comonad.Cofree (Cofree, deferCofree)
@@ -8,140 +9,98 @@ import Data.Identity (Identity(..))
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Map as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (Maybe(..), fromJust)
 import Data.NonEmpty (NonEmpty)
 import Data.Symbol (class IsSymbol)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested (type (/\), (/\))
-import Data.Typelevel.Num
-  ( class Pred
-  , D0
-  , D1
-  , D10
-  , D11
-  , D12
-  , D13
-  , D14
-  , D15
-  , D16
-  , D17
-  , D18
-  , D19
-  , D2
-  , D20
-  , D21
-  , D22
-  , D23
-  , D24
-  , D25
-  , D26
-  , D27
-  , D28
-  , D29
-  , D3
-  , D30
-  , D31
-  , D4
-  , D5
-  , D6
-  , D7
-  , D8
-  , D9
-  , d31
-  , pred
-  )
 import Hikari.FullGraph (FullGraph)
-import Hikari.Types (NoteSounds, NoteTimings, PlaySound(..))
+import Hikari.Types (KeySoundFn(..))
 import Partial.Unsafe (unsafePartial)
 import Prim.Row (class Cons)
 import Prim.Symbol (class Append)
+import Record as Record
 import Type.Proxy (Proxy(..))
 import WAGS.Change (ichange')
+import WAGS.Control.Indexed (IxWAG)
+import WAGS.Create.Optionals (subgraphSingleSetter)
 import WAGS.Graph.AudioUnit (TPlayBuf)
 import WAGS.Graph.Parameter (AudioOnOff(..), _offOn)
 import WAGS.WebAPI (BrowserAudioBuffer)
 
 type Accumulator =
-  { sounds :: Cofree Identity PlaySound
-  , noteSounds :: NoteSounds
-  , noteTimings :: NoteTimings
+  { bgmKeySoundFn :: { _0 :: Cofree Identity KeySoundFn, _1 :: Cofree Identity KeySoundFn }
   }
 
-initialAccumulator :: NoteSounds -> NoteTimings -> Accumulator
-initialAccumulator noteSounds noteTimings =
-  { sounds
-  , noteSounds
-  , noteTimings
+initialAccumulator :: Accumulator
+initialAccumulator =
+  { bgmKeySoundFn:
+      { _0: keySoundFnCf.bgm0
+      , _1: keySoundFnCf.bgm1
+      }
   }
 
-class CofreeN2S (n :: Type) where
-  cofreeN2S :: n -> Cofree Identity PlaySound
+-- INTERNALS!!! BE WARNED!!!
 
-instance CofreeN2S D0 where
-  cofreeN2S _ = deferCofree
-    ( \_ -> Tuple
-        ( PlaySound
-            ( \{ buffer } -> ichange' (Proxy :: _ "wav0")
-                { onOff: _offOn, buffer }
-            )
-        )
-        (Identity sounds)
-    )
-else instance
-  ( IsSymbol wavs
-  , Cons wavs (Tuple TPlayBuf {}) r' FullGraph
-  , N2S n s
-  , Append "wav" s wavs
-  , Pred n n'
-  , CofreeN2S n'
+type OfValues v =
+  ( bgm0 :: v
+  , bgm1 :: v
+  )
+
+-- Each audio source node in the graph has a cycling stream of
+-- `KeySoundFn`s.
+keySoundFnCf :: { | OfValues (Cofree Identity KeySoundFn) }
+keySoundFnCf =
+  { bgm0: mkKeySoundFnCf (Proxy :: _ "bgm0") d31
+  , bgm1: mkKeySoundFnCf (Proxy :: _ "bgm1") d31
+  }
+
+-- Builds the corresponding `KeySoundFn` for an audio source node
+-- given the subgraph index.
+keySoundFnHd
+  :: forall nat
+   . Nat nat
+  => Lt nat D32
+  => nat
+  -> { | OfValues KeySoundFn
+     }
+keySoundFnHd index =
+  { bgm0: KeySoundFn
+      (\input -> ichange' (Proxy :: _ "bgm0") (subgraphSingleSetter index $ Just input))
+  , bgm1: KeySoundFn
+      (\input -> ichange' (Proxy :: _ "bgm1") (subgraphSingleSetter index $ Just input))
+  }
+
+-- A helper induction for building the looping `KeySoundFn` stream.
+class MkKeySoundFnCf :: Symbol -> Type -> Constraint
+class MkKeySoundFnCf graphNode subgraphIndex where
+  mkKeySoundFnCf :: Proxy graphNode -> subgraphIndex -> Cofree Identity KeySoundFn
+
+-- At the base case, we take the already-built stream and "append" it
+-- to the end, effectively creating an infinite stream.
+instance
+  ( IsSymbol graphNode
+  , Cons graphNode (Cofree Identity KeySoundFn) _0 (OfValues (Cofree Identity KeySoundFn))
+  , Cons graphNode KeySoundFn _1 (OfValues KeySoundFn)
   ) =>
-  CofreeN2S n where
-  cofreeN2S i = deferCofree
-    ( \_ -> Tuple
-        ( PlaySound
-            ( \{ buffer, timeOffset } ->
-                ichange' (Proxy :: _ wavs)
-                  { onOff: AudioOnOff { onOff: _offOn, timeOffset }, buffer }
-            )
-        )
-        (Identity (cofreeN2S (pred i)))
+  MkKeySoundFnCf graphNode D0 where
+  mkKeySoundFnCf graphNode subgraphIndex = deferCofree
+    ( \_ -> Record.get graphNode (keySoundFnHd subgraphIndex) /\ Identity
+        (Record.get graphNode keySoundFnCf)
     )
 
-sounds :: Cofree Identity PlaySound
-sounds = cofreeN2S d31
-
-class N2S :: Type -> Symbol -> Constraint
-class N2S n s | n -> s
-
-instance N2S D0 "0"
-instance N2S D1 "1"
-instance N2S D2 "2"
-instance N2S D3 "3"
-instance N2S D4 "4"
-instance N2S D5 "5"
-instance N2S D6 "6"
-instance N2S D7 "7"
-instance N2S D8 "8"
-instance N2S D9 "9"
-instance N2S D10 "10"
-instance N2S D11 "11"
-instance N2S D12 "12"
-instance N2S D13 "13"
-instance N2S D14 "14"
-instance N2S D15 "15"
-instance N2S D16 "16"
-instance N2S D17 "17"
-instance N2S D18 "18"
-instance N2S D19 "19"
-instance N2S D20 "20"
-instance N2S D21 "21"
-instance N2S D22 "22"
-instance N2S D23 "23"
-instance N2S D24 "24"
-instance N2S D25 "25"
-instance N2S D26 "26"
-instance N2S D27 "27"
-instance N2S D28 "28"
-instance N2S D29 "29"
-instance N2S D30 "30"
-instance N2S D31 "31"
+-- At the recursive case, we append `subgraphIndex - 1` to the end of
+-- the stream.
+else instance
+  ( IsSymbol graphNode
+  , Cons graphNode (Cofree Identity KeySoundFn) _0 (OfValues (Cofree Identity KeySoundFn))
+  , Cons graphNode KeySoundFn _1 (OfValues KeySoundFn)
+  , Lt subgraphIndex D32
+  , Pred subgraphIndex predSubgraphIndex
+  , MkKeySoundFnCf graphNode predSubgraphIndex
+  ) =>
+  MkKeySoundFnCf graphNode subgraphIndex where
+  mkKeySoundFnCf graphNode subgraphIndex = deferCofree
+    ( \_ -> Record.get graphNode (keySoundFnHd subgraphIndex) /\ Identity
+        (mkKeySoundFnCf graphNode (pred subgraphIndex))
+    )

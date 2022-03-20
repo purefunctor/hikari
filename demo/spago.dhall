@@ -21,6 +21,8 @@
   , "parallel"
   , "partial"
   , "prelude"
+  , "record"
+  , "sized-vectors"
   , "string-parsers"
   , "strings"
   , "transformers"

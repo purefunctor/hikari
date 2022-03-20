@@ -1,6 +1,6 @@
 module Hikari.Types where
 
-import BMS.Types (Note)
+import BMS.Types (Note, Offset)
 import Control.Comonad.Cofree (Cofree)
 import Data.Identity (Identity)
 import Data.List (List)
@@ -15,30 +15,28 @@ import WAGS.Control.Indexed (IxWAG)
 import WAGS.Run (RunAudio, RunEngine)
 import WAGS.WebAPI (BrowserAudioBuffer)
 
-type NoteTimings = List (Number /\ NonEmpty List Note)
-
-type NoteSounds = Map String BrowserAudioBuffer
-
-newtype PlaySound = PlaySound
+newtype KeySoundFn = KeySoundFn
   ( forall proof
-     . { buffer :: BrowserAudioBuffer, timeOffset :: Number }
+     . { note :: Note
+       , offset :: Offset
+       }
     -> IxWAG RunAudio RunEngine proof Residuals FullGraph FullGraph Unit
   )
 
-playSound
-  :: PlaySound
+playKeySound
+  :: KeySoundFn
   -> ( forall proof
-        . { buffer :: BrowserAudioBuffer, timeOffset :: Number }
+        . { note :: Note
+          , offset :: Offset
+          }
        -> IxWAG RunAudio RunEngine proof Residuals FullGraph FullGraph Unit
      )
-playSound (PlaySound fn) = fn
+playKeySound (KeySoundFn fn) = fn
 
 type World =
-  { noteSounds :: NoteSounds
-  , noteTimings :: NoteTimings
+  {
   }
 
 type Residuals =
-  { clockTime :: Additive Number
-  , finished :: Disj Boolean
+  {
   }

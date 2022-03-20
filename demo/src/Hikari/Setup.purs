@@ -14,6 +14,4 @@ setup
   :: forall proof
    . TriggeredScene Unit World ()
   -> IxWAG RunAudio RunEngine proof Residuals FullGraph FullGraph Accumulator
-setup (TriggeredScene { world: { noteSounds, noteTimings } }) = do
-  ichange' (Proxy :: _ "fader") 1.0
-  pure (initialAccumulator noteSounds noteTimings)
+setup (TriggeredScene _) = ichange' (Proxy :: _ "fader") 1.0 $> initialAccumulator
