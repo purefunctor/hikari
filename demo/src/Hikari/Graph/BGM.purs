@@ -3,6 +3,7 @@ module Hikari.Graph.BGM where
 import Prelude
 
 import BMS.Types (Note, Offset)
+import Control.Monad.Indexed ((:*>))
 import Control.Plus (empty)
 import Data.Maybe (Maybe(..))
 import Data.Maybe (Maybe)
@@ -20,12 +21,13 @@ import WAGS.Graph.AudioUnit as CTOR
 import WAGS.Interpret (class AudioInterpret, AsSubgraph(..))
 import WAGS.Interpret (AsSubgraph)
 import WAGS.Patch (ipatch)
+import WAGS.Run (RunAudio, RunEngine, TriggeredScene)
 
 type Name = "bgmFader"
 
 type Count = D32
 
-type Input = Maybe
+type Environment = Maybe
   { note :: Note
   , offset :: Offset
   , switch :: Boolean
@@ -37,39 +39,40 @@ type Graph =
   , bgmB :: TPlayBuf /\ {}
   )
 
-type Signature = Subgraph () (AsSubgraph Name () Input) (Vec Count Input)
-
-type TBGM = TSubgraph Count Name () Input
+type TBGM = TSubgraph Count Name () Environment
 
 --
 
-createFrameSub
-  :: forall res audio engine
+initialize
+  :: forall residuals audio engine
    . AudioInterpret audio engine
-  => IxWAG audio engine Frame0 res () Graph Unit
-createFrameSub = ipatch
+  => IxWAG audio engine Frame0 residuals () Graph Unit
+initialize = ipatch
   { microphone: empty
   , mediaElement: empty
   , subgraphs: { bgmFader }
   , tumults: {}
   }
 
-subFrameLoop
-  :: forall res proof audio engine
+setup
+  :: forall residuals proof audio engine
    . AudioInterpret audio engine
-  => Input
-  -> Unit
-  -> IxWAG audio engine proof res Graph Graph Unit
-subFrameLoop Nothing _ =
-  pure unit
-subFrameLoop (Just _) _ = do
-  ichange' (Proxy :: _ "bgmFader") 1.0
-  pure unit
+  => Environment
+  -> IxWAG audio engine proof residuals Graph Graph Unit
+setup _ = ichange' (Proxy :: _ "bgmFader") 1.0 $> unit
 
-bgmFader :: Signature
+loop
+  :: forall residuals proof audio engine
+   . AudioInterpret audio engine
+  => Environment
+  -> Unit
+  -> IxWAG audio engine proof residuals Graph Graph Unit
+loop _ _ = pure unit
+
+bgmFader :: Subgraph () (AsSubgraph Name () Environment) (Vec Count Environment)
 bgmFader = Subgraph
   { subgraphMaker: AsSubgraph
-      ( const $ SG.istart (\_ -> createFrameSub) (SG.iloop subFrameLoop)
+      ( const $ SG.istart (\e -> initialize :*> setup e) (SG.iloop loop)
       )
   , envs: fill $ const Nothing
   }
