@@ -4,10 +4,12 @@ import Prelude
 
 import Control.Comonad.Cofree (Cofree, deferCofree)
 import Data.Identity (Identity(..))
+import Data.Map (Map)
+import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol)
 import Data.Tuple.Nested ((/\))
-import Data.Typelevel.Num (class Lt, class Nat, class Pred, D0, D32, d31, pred)
+import Data.Typelevel.Num (class Lt, class Nat, class Pred, D0, D32, d31, pred, toInt)
 import Hikari.Types (KeySoundFn(..))
 import Prim.Row (class Cons)
 import Record as Record
@@ -17,7 +19,7 @@ import WAGS.Create.Optionals (subgraphSingleSetter)
 
 type Accumulator =
   { keySoundFn ::
-      { bgm :: Cofree Identity KeySoundFn
+      { bgm :: Map Int (Cofree Identity KeySoundFn)
       }
   }
 
@@ -37,7 +39,7 @@ type OfValues v =
 
 -- Each audio source node in the graph has a cycling stream of
 -- `KeySoundFn`s.
-keySoundFnCf :: { | OfValues (Cofree Identity KeySoundFn) }
+keySoundFnCf :: { | OfValues (Map Int (Cofree Identity KeySoundFn)) }
 keySoundFnCf =
   { bgm: mkKeySoundFnCf (Proxy :: _ "bgm") d31
   }
@@ -62,35 +64,34 @@ keySoundFnHd index switch =
 -- A helper induction for building the looping `KeySoundFn` stream.
 class MkKeySoundFnCf :: Symbol -> Type -> Constraint
 class MkKeySoundFnCf graphNode subgraphIndex where
-  mkKeySoundFnCf :: Proxy graphNode -> subgraphIndex -> Cofree Identity KeySoundFn
+  mkKeySoundFnCf :: Proxy graphNode -> subgraphIndex -> Map Int (Cofree Identity KeySoundFn)
 
 -- At the base case, we take the already-built stream and "append" it
 -- to the end, effectively creating an infinite stream.
 instance
   ( IsSymbol graphNode
-  , Cons graphNode (Cofree Identity KeySoundFn) _0 (OfValues (Cofree Identity KeySoundFn))
-  , Cons graphNode KeySoundFn _1 (OfValues KeySoundFn)
+  , Cons graphNode KeySoundFn _0 (OfValues KeySoundFn)
   ) =>
   MkKeySoundFnCf graphNode D0 where
   mkKeySoundFnCf graphNode subgraphIndex =
     let
       keySoundFnHd' = keySoundFnHd subgraphIndex
+      keySoundFnCf' =
+        deferCofree
+          ( \_ -> Record.get graphNode (keySoundFnHd' false) /\ Identity
+              ( deferCofree
+                  ( \_ -> Record.get graphNode (keySoundFnHd' true) /\ Identity keySoundFnCf'
+                  )
+              )
+          )
     in
-      deferCofree
-        ( \_ -> Record.get graphNode (keySoundFnHd' false) /\ Identity
-            ( deferCofree
-                ( \_ -> Record.get graphNode (keySoundFnHd' true) /\ Identity
-                    (Record.get graphNode keySoundFnCf)
-                )
-            )
-        )
+      Map.singleton 0 keySoundFnCf'
 
 -- At the recursive case, we append `subgraphIndex - 1` to the end of
 -- the stream.
 else instance
   ( IsSymbol graphNode
-  , Cons graphNode (Cofree Identity KeySoundFn) _0 (OfValues (Cofree Identity KeySoundFn))
-  , Cons graphNode KeySoundFn _1 (OfValues KeySoundFn)
+  , Cons graphNode KeySoundFn _0 (OfValues KeySoundFn)
   , Lt subgraphIndex D32
   , Pred subgraphIndex predSubgraphIndex
   , MkKeySoundFnCf graphNode predSubgraphIndex
@@ -99,12 +100,16 @@ else instance
   mkKeySoundFnCf graphNode subgraphIndex =
     let
       keySoundFnHd' = keySoundFnHd subgraphIndex
+      keySoundFnCf' =
+        deferCofree
+          ( \_ -> Record.get graphNode (keySoundFnHd' false) /\ Identity
+              ( deferCofree
+                  ( \_ -> Record.get graphNode (keySoundFnHd' true) /\ Identity keySoundFnCf'
+                  )
+              )
+          )
     in
-      deferCofree
-        ( \_ -> Record.get graphNode (keySoundFnHd' false) /\ Identity
-            ( deferCofree
-                ( \_ -> Record.get graphNode (keySoundFnHd' true) /\ Identity
-                    (mkKeySoundFnCf graphNode (pred subgraphIndex))
-                )
-            )
-        )
+      Map.insert
+        (toInt subgraphIndex)
+        keySoundFnCf'
+        (mkKeySoundFnCf graphNode (pred subgraphIndex))

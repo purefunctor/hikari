@@ -7,6 +7,7 @@ import BMS.Timing (gatherAll, noteOffsets)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
+import Effect.Class.Console (log)
 import FRP.Event (subscribe)
 import FRP.Event.Time (interval)
 import Hikari.Engine (scene)
@@ -22,14 +23,19 @@ main = launchAff_ do
   ffiAudio <- liftEffect $ makeFFIAudioSnapshot audioCtx
 
   bme <- gatherAll <<< bms <$> fetchText "./sounds/01.bme"
+  log "Loaded BME file."
+
   let noteWithOffsets = noteOffsets bme
+  log "Computed offsets."
+
   keySoundBuffers <- loadKeySoundBuffers audioCtx bme
+  log "Computed buffers."
 
   let
-    timeEvent = interval 1000 $> unit
+    timeEvent = interval 10 $> unit
     world = { keySoundBuffers, noteWithOffsets }
 
   _ <- liftEffect $ subscribe (runNoLoop timeEvent (pure world) {} ffiAudio scene)
-    (\(_ :: TriggeredRun Residuals ()) -> pure unit)
+    (\(_ :: TriggeredRun Residuals ()) -> log "loop!")
 
   pure unit

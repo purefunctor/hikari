@@ -5,6 +5,7 @@ import Prelude
 import Control.Monad.Indexed ((:*>))
 import Control.Plus (empty)
 import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap)
 import Data.Tuple.Nested (type (/\))
 import Data.Vec (Vec, fill)
 import Hikari.Graph.BGM (Count, Environment, Graph, Name)
@@ -15,6 +16,7 @@ import WAGS.Control.Indexed (IxWAG)
 import WAGS.Control.Types (Frame0, SubScene)
 import WAGS.Create.Optionals (subgraph)
 import WAGS.Graph.AudioUnit (Subgraph)
+import WAGS.Graph.Parameter (AudioOnOff(..), _offOn)
 import WAGS.Interpret (class AudioInterpret, AsSubgraph)
 import WAGS.Patch (ipatch)
 
@@ -42,7 +44,15 @@ loop
   => Environment
   -> Unit
   -> IxWAG audio engine proof residuals Graph Graph Unit
-loop _ _ = pure unit
+loop Nothing _ = pure unit
+loop (Just { buffer, offset, switch }) _ =
+  let
+    argument = { buffer, onOff: AudioOnOff { onOff: _offOn, timeOffset: unwrap offset } }
+  in
+    if switch then
+      ichange' (Proxy :: _ "bgmA") argument
+    else
+      ichange' (Proxy :: _ "bgmB") argument
 
 scene
   :: forall audio engine
