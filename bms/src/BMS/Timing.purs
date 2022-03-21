@@ -182,15 +182,11 @@ noteOffsets { headers, measures } = _.columns $ foldlWithIndex go
     nextOffset =
       if nextMeasure == prev.measure then prev.offset
       else prev.offset + length * Int.toNumber (nextMeasure - prev.measure)
-    nextOffsettedNotes = _.offsetted $ foldlWithIndex go'
-      { offsetted: Map.empty, offset: nextOffset }
-      (unwrap notes)
+    nextColumns = Map.insertWith Map.union column (foldlWithIndex go' Map.empty (unwrap notes))
+      prev.columns
       where
-      go' index prev' note =
-        let
-          nextOffset' = prev'.offset + delta * Int.toNumber index
-        in
-          { offsetted: Map.insert (Offset nextOffset') note prev'.offsetted
-          , offset: nextOffset'
-          }
-    nextColumns = Map.insertWith Map.union column nextOffsettedNotes prev.columns
+      go' index offsetted = case _ of
+        Note "00" ->
+          offsetted
+        note ->
+          Map.insert (Offset $ nextOffset + delta * Int.toNumber index) note offsetted
