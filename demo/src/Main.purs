@@ -4,6 +4,7 @@ import Prelude
 
 import BMS.Parser (bms)
 import BMS.Timing (gatherAll, noteOffsets)
+import Data.Map as Map
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
@@ -23,17 +24,12 @@ main = launchAff_ do
   ffiAudio <- liftEffect $ makeFFIAudioSnapshot audioCtx
 
   bme <- gatherAll <<< bms <$> fetchText "./sounds/01.bme"
-  log "Loaded BME file."
-
-  let noteWithOffsets = noteOffsets bme
-  log "Computed offsets."
-
+  let notesPerColumn = Map.toUnfoldable <$> noteOffsets bme
   keySoundBuffers <- loadKeySoundBuffers audioCtx bme
-  log "Computed buffers."
 
   let
     timeEvent = interval 10 $> unit
-    world = { keySoundBuffers, noteWithOffsets }
+    world = { keySoundBuffers, notesPerColumn }
 
   _ <- liftEffect $ subscribe (runNoLoop timeEvent (pure world) {} ffiAudio scene)
     (\(_ :: TriggeredRun Residuals ()) -> log "loop!")

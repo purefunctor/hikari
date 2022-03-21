@@ -2,14 +2,16 @@ module Hikari.Accumulator (Accumulator, initial) where
 
 import Prelude
 
+import BMS.Types (Column, Note, Offset)
 import Control.Comonad.Cofree (Cofree, deferCofree)
 import Data.Identity (Identity(..))
+import Data.List (List)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol)
-import Data.Tuple.Nested ((/\))
-import Data.Typelevel.Num (class Lt, class Nat, class Pred, D0, D32, d31, pred, toInt)
+import Data.Tuple.Nested ((/\), type (/\))
+import Data.Typelevel.Num (class Lt, class Nat, class Pred, D0, D32, d7, d31, pred, toInt)
 import Hikari.Types (KeySoundFn(..))
 import Prim.Row (class Cons)
 import Record as Record
@@ -18,16 +20,20 @@ import WAGS.Change (ichange')
 import WAGS.Create.Optionals (subgraphSingleSetter)
 
 type Accumulator =
-  { keySoundFn ::
+  { notesPerColumn :: Map Column (List (Offset /\ Note))
+  , keySoundFn ::
       { bgm :: Map Int (Cofree Identity KeySoundFn)
+      , fgm :: Map Int (Cofree Identity KeySoundFn)
       }
   }
 
-initial :: Accumulator
-initial =
-  { keySoundFn:
-      { bgm: keySoundFnCf.bgm
-      }
+initial :: Map Column (List (Offset /\ Note)) -> Accumulator
+initial notesPerColumn =
+  { notesPerColumn
+  , keySoundFn:
+    { bgm: keySoundFnCf.bgm
+    , fgm: keySoundFnCf.fgm
+    }
   }
 
 -- INTERNALS!!! BE WARNED!!!
@@ -35,6 +41,7 @@ initial =
 type OfValues :: forall k. k -> Row k
 type OfValues v =
   ( bgm :: v
+  , fgm :: v
   )
 
 -- Each audio source node in the graph has a cycling stream of
@@ -42,6 +49,7 @@ type OfValues v =
 keySoundFnCf :: { | OfValues (Map Int (Cofree Identity KeySoundFn)) }
 keySoundFnCf =
   { bgm: mkKeySoundFnCf (Proxy :: _ "bgm") d31
+  , fgm: mkKeySoundFnCf (Proxy :: _ "fgm") d7
   }
 
 -- Builds the corresponding `KeySoundFn` for an audio source node
@@ -59,6 +67,10 @@ keySoundFnHd index switch =
       ( \input -> ichange' (Proxy :: _ "bgm")
           (subgraphSingleSetter index $ Just { buffer: input.buffer, offset: input.offset, switch })
       )
+  , fgm: KeySoundFn
+     ( \input -> ichange' (Proxy :: _ "fgm")
+          (subgraphSingleSetter index $ Just { buffer: input.buffer, offset: input.offset, switch })
+     )
   }
 
 -- A helper induction for building the looping `KeySoundFn` stream.
