@@ -1,32 +1,19 @@
 module Hikari.Accumulator (Accumulator, initial) where
 
-import Data.Typelevel.Num
 import Prelude
 
 import Control.Comonad.Cofree (Cofree, deferCofree)
-import Data.Function (($))
 import Data.Identity (Identity(..))
-import Data.List (List(..), (:))
-import Data.List as List
-import Data.Map as Map
-import Data.Maybe (Maybe(..), fromJust)
-import Data.NonEmpty (NonEmpty)
+import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol)
-import Data.Tuple (Tuple(..))
-import Data.Tuple.Nested (type (/\), (/\))
-import Hikari.Graph (FullGraph)
+import Data.Tuple.Nested ((/\))
+import Data.Typelevel.Num (class Lt, class Nat, class Pred, D0, D32, d31, pred)
 import Hikari.Types (KeySoundFn(..))
-import Partial.Unsafe (unsafePartial)
 import Prim.Row (class Cons)
-import Prim.Symbol (class Append)
 import Record as Record
 import Type.Proxy (Proxy(..))
 import WAGS.Change (ichange')
-import WAGS.Control.Indexed (IxWAG)
 import WAGS.Create.Optionals (subgraphSingleSetter)
-import WAGS.Graph.AudioUnit (TPlayBuf)
-import WAGS.Graph.Parameter (AudioOnOff(..), _offOn)
-import WAGS.WebAPI (BrowserAudioBuffer)
 
 type Accumulator =
   { keySoundFn ::
@@ -43,6 +30,7 @@ initial =
 
 -- INTERNALS!!! BE WARNED!!!
 
+type OfValues :: forall k. k -> Row k
 type OfValues v =
   ( bgm :: v
   )

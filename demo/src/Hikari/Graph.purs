@@ -2,14 +2,9 @@ module Hikari.Graph where
 
 import Prelude
 
-import BMS.Types (Note, Offset)
-import Data.Maybe (Maybe)
 import Data.Tuple.Nested (type (/\))
-import Data.Typelevel.Num (D32, D80)
-import Data.Vec (Vec)
 import Hikari.Graph.BGM (TBGM)
-import WAGS.Graph.AudioUnit (Subgraph, TGain, TPlayBuf, TSpeaker, TSubgraph)
-import WAGS.Interpret (AsSubgraph)
+import WAGS.Graph.AudioUnit (TGain, TSpeaker)
 
 type FullGraph =
   ( -- The physical output device where keysounds are played.
