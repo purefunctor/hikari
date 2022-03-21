@@ -12,7 +12,7 @@ import Type.Proxy (Proxy(..))
 import WAGS.Change (ichange')
 import WAGS.Control.Functions.Subgraph as SG
 import WAGS.Control.Indexed (IxWAG)
-import WAGS.Control.Types (Frame0)
+import WAGS.Control.Types (Frame0, SubScene)
 import WAGS.Create.Optionals (subgraph)
 import WAGS.Graph.AudioUnit (Subgraph)
 import WAGS.Interpret (class AudioInterpret, AsSubgraph)
@@ -44,8 +44,11 @@ loop
   -> IxWAG audio engine proof residuals Graph Graph Unit
 loop _ _ = pure unit
 
+scene
+  :: forall audio engine
+   . AudioInterpret audio engine
+  => SubScene Name () Environment audio engine Frame0 Unit
+scene = SG.istart (\e -> initialize :*> setup e) (SG.iloop loop)
+
 bgmFader :: Subgraph () (AsSubgraph Name () Environment) (Vec Count Environment) /\ {}
-bgmFader = subgraph
-  (fill $ const Nothing)
-  (const $ SG.istart (\e -> initialize :*> setup e) (SG.iloop loop))
-  {}
+bgmFader = subgraph (fill $ const Nothing) (const scene) {}

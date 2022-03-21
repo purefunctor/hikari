@@ -39,7 +39,7 @@ type OfValues v =
 -- `KeySoundFn`s.
 keySoundFnCf :: { | OfValues (Cofree Identity KeySoundFn) }
 keySoundFnCf =
-  { bgm: mkKeySoundFnCf (Proxy :: _ "bgm") d31 false
+  { bgm: mkKeySoundFnCf (Proxy :: _ "bgm") d31
   }
 
 -- Builds the corresponding `KeySoundFn` for an audio source node
@@ -55,14 +55,14 @@ keySoundFnHd
 keySoundFnHd index switch =
   { bgm: KeySoundFn
       ( \input -> ichange' (Proxy :: _ "bgm")
-          (subgraphSingleSetter index $ Just { note: input.note, offset: input.offset, switch })
+          (subgraphSingleSetter index $ Just { buffer: input.buffer, offset: input.offset, switch })
       )
   }
 
 -- A helper induction for building the looping `KeySoundFn` stream.
 class MkKeySoundFnCf :: Symbol -> Type -> Constraint
 class MkKeySoundFnCf graphNode subgraphIndex where
-  mkKeySoundFnCf :: Proxy graphNode -> subgraphIndex -> Boolean -> Cofree Identity KeySoundFn
+  mkKeySoundFnCf :: Proxy graphNode -> subgraphIndex -> Cofree Identity KeySoundFn
 
 -- At the base case, we take the already-built stream and "append" it
 -- to the end, effectively creating an infinite stream.
@@ -72,10 +72,18 @@ instance
   , Cons graphNode KeySoundFn _1 (OfValues KeySoundFn)
   ) =>
   MkKeySoundFnCf graphNode D0 where
-  mkKeySoundFnCf graphNode subgraphIndex switch = deferCofree
-    ( \_ -> Record.get graphNode (keySoundFnHd subgraphIndex switch) /\ Identity
-        (Record.get graphNode keySoundFnCf)
-    )
+  mkKeySoundFnCf graphNode subgraphIndex =
+    let
+      keySoundFnHd' = keySoundFnHd subgraphIndex
+    in
+      deferCofree
+        ( \_ -> Record.get graphNode (keySoundFnHd' false) /\ Identity
+            ( deferCofree
+                ( \_ -> Record.get graphNode (keySoundFnHd' true) /\ Identity
+                    (Record.get graphNode keySoundFnCf)
+                )
+            )
+        )
 
 -- At the recursive case, we append `subgraphIndex - 1` to the end of
 -- the stream.
@@ -88,7 +96,15 @@ else instance
   , MkKeySoundFnCf graphNode predSubgraphIndex
   ) =>
   MkKeySoundFnCf graphNode subgraphIndex where
-  mkKeySoundFnCf graphNode subgraphIndex switch = deferCofree
-    ( \_ -> Record.get graphNode (keySoundFnHd subgraphIndex switch) /\ Identity
-        (mkKeySoundFnCf graphNode (pred subgraphIndex) (not switch))
-    )
+  mkKeySoundFnCf graphNode subgraphIndex =
+    let
+      keySoundFnHd' = keySoundFnHd subgraphIndex
+    in
+      deferCofree
+        ( \_ -> Record.get graphNode (keySoundFnHd' false) /\ Identity
+            ( deferCofree
+                ( \_ -> Record.get graphNode (keySoundFnHd' true) /\ Identity
+                    (mkKeySoundFnCf graphNode (pred subgraphIndex))
+                )
+            )
+        )

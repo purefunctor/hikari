@@ -5,8 +5,8 @@ import Prelude
 import Control.Monad.Indexed ((:*>))
 import Hikari.Accumulator (Accumulator)
 import Hikari.Accumulator as Accumulator
-import Hikari.Graph (FullGraph)
 import Hikari.Engine.BGM as EngineBGM
+import Hikari.Graph (FullGraph)
 import Hikari.Residuals (Residuals)
 import Hikari.World (World)
 import Type.Proxy (Proxy(..))

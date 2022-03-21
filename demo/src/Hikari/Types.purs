@@ -6,10 +6,11 @@ import Hikari.Graph (FullGraph)
 import Hikari.Residuals (Residuals)
 import WAGS.Control.Indexed (IxWAG)
 import WAGS.Run (RunAudio, RunEngine)
+import WAGS.WebAPI (BrowserAudioBuffer)
 
 newtype KeySoundFn = KeySoundFn
   ( forall proof
-     . { note :: Note
+     . { buffer :: BrowserAudioBuffer
        , offset :: Offset
        }
     -> IxWAG RunAudio RunEngine proof Residuals FullGraph FullGraph Unit
@@ -18,7 +19,7 @@ newtype KeySoundFn = KeySoundFn
 playKeySound
   :: KeySoundFn
   -> ( forall proof
-        . { note :: Note
+        . { buffer :: BrowserAudioBuffer
           , offset :: Offset
           }
        -> IxWAG RunAudio RunEngine proof Residuals FullGraph FullGraph Unit
