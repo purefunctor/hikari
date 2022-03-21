@@ -7,7 +7,8 @@ import Hikari.Accumulator (Accumulator)
 import Hikari.Accumulator as Accumulator
 import Hikari.Graph (FullGraph)
 import Hikari.Graph.BGM as GraphBGM
-import Hikari.Types (Residuals, World)
+import Hikari.Residuals (Residuals)
+import Hikari.World (World)
 import Type.Proxy (Proxy(..))
 import WAGS.Change (ichange')
 import WAGS.Control.Functions.Graph (iloop, (@!>))

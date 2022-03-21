@@ -3,6 +3,7 @@ module Hikari.Types where
 import BMS.Types (Note, Offset)
 import Data.Unit (Unit)
 import Hikari.Graph (FullGraph)
+import Hikari.Residuals (Residuals)
 import WAGS.Control.Indexed (IxWAG)
 import WAGS.Run (RunAudio, RunEngine)
 
@@ -23,11 +24,3 @@ playKeySound
        -> IxWAG RunAudio RunEngine proof Residuals FullGraph FullGraph Unit
      )
 playKeySound (KeySoundFn fn) = fn
-
-type World =
-  {
-  }
-
-type Residuals =
-  {
-  }
